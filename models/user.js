@@ -1,0 +1,57 @@
+import mongoose from "mongoose";
+
+const UserSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      unique: true,
+      required: true,
+    },
+    password: {
+      type: String,
+      required: true,
+    },
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+    },
+    is_deleted: {
+      type: Boolean,
+      default: false,
+    },
+    role: {
+      type: String,
+      required: true,
+      enum: ["student", "admin", "instructor"], //----
+      default: "student",
+    },
+    profile_pic: {
+      type: String,
+      default: null,
+    },
+    bio: {
+      type: String,
+      default: null,
+    },
+    // courses: [
+    //   {
+    //     type: mongoose.Schema.Types.ObjectId,
+    //     ref: "courses",
+    //   },
+    // ],
+    is_approved: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+const User = mongoose.model("users", UserSchema);
+
+export default User;
