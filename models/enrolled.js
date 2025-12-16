@@ -15,7 +15,7 @@ const enrolledSchema = new mongoose.Schema({
           ref: "users",
           required: true,
         },
-        
+         price_at_purchase: { type: Number, required: true },
 }, { timestamps: true })
 
 

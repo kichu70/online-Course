@@ -8,6 +8,8 @@ import {
   deleteLecture,
   enrolledDetails,
   instructorCourse,
+  instructorEarnings,
+  mostRatedCourse,
   singleCourse,
   singleLecture,
   updateCourse,
@@ -22,6 +24,10 @@ const router = express.Router();
 router.use(authCheck);
 
 router.get("/all-course", instructorCourse);
+
+router.get("/top-rated-course", mostRatedCourse);
+
+router.get('/enrolled-students',enrolledDetails)
 
 router.get("/single-course",singleCourse)
 
@@ -44,8 +50,19 @@ router.post(
       .isIn(['BCA','B-come','BA','BBA']).withMessage("Category must be either 'BCA','B-come','BA','BBA'"),
     check("price")
       .optional()
+      .custom((value) => {
+    if (value === "" || value === null || value === undefined) return true;
+
+    const num = Number(value);
+    if (isNaN(num)) throw new Error("Price must be a number");
+
+    if (num === 0) return true;  
+    if (num >= 50) return true;
+
+    throw new Error("Price must be 0 (free) or at least ₹50");
+  })
   ],
-  createCoures
+  createCoures  
 );
 
 router.put(
@@ -62,12 +79,21 @@ router.put(
     check("category").optional(),
     check("price")
       .optional()
+       .custom((value) => {
+    const num = parseFloat(value);
+
+    if (num === 0) return true;  
+    if (num === null) return true;  
+    if (num >= 50) return true;
+
+    throw new Error("Price must be 0 (free) or at least ₹50");
+  })
     ,
   ],
   updateCourse
 );
 
-router.put("/delete-reactive-course", deleteCourse);
+router.put("/delete-course", deleteCourse);
 
 
 // -------------------lecture routes--------
@@ -100,8 +126,12 @@ router.put(
 router.put("/delete-lecture", deleteLecture);
 
 
-router.get('/enrolled-students',enrolledDetails)
 
 router.get("/avarge-rating",avgRating)
+
+// --------------total earnings------------------
+
+router.get("/total-earning",instructorEarnings)
+
 
 export default router;

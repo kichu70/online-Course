@@ -36,8 +36,8 @@ export const createCheckoutSession = async (req, res) => {
         userId,
         courseId,
       },
-      success_url: `http://localhost:5000/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `http://localhost:5000/cancel`,
+      success_url: `http://localhost:3000/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `http://localhost:3000/cancel`,
     });
 
     res.json({ url: session.url });
@@ -46,3 +46,4 @@ export const createCheckoutSession = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+  

@@ -16,7 +16,7 @@ export const singleCourse = async (req, res) => {
         instructor: instructorId,
         _id: courseId,
       });
-      return res.status(200).json({ message: "all courses are", courses });
+      return res.status(200).json({ message: "course is", data:courses });
     }
   } catch (err) {
     res
@@ -46,11 +46,30 @@ export const instructorCourse = async (req, res) => {
   }
 };
 
+// -----------------find the most rated ---------------
+
+export const mostRatedCourse = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    if (!userId) {
+      return res.status(400).json({ message: "id is requierd" });
+    } else {
+      const course = await Course.find({
+        instructor: userId,
+        is_deleted: false,
+      }).sort({ average_rating: -1 });
+      res.status(201).json({ message: "all couses are fetched", data: course });
+    }
+  } catch (err) {
+    console.log(err, "error is in the bakend view-all-course");
+    res.status(500).json({ message: "error is in the bakend view-all-course" });
+  }
+};
 //------------creating course--------------
 
 export const createCoures = async (req, res) => {
   try {
-    const { id: userId, role: userRole } = req.user;
+    const { id: userId, role: userRole, name: userName } = req.user;
 
     if (userRole !== "instructor") {
       return res.status(401).json({
@@ -81,8 +100,9 @@ export const createCoures = async (req, res) => {
         title,
         description,
         category,
-        price,
+        price: price ? price : 0,
         instructor: userId,
+        instructor_name: userName,
         thumbnail: thumbnailPath,
       });
 
@@ -447,33 +467,41 @@ export const deleteLecture = async (req, res) => {
 };
 
 // -----------enrolledCousersDetail------------------
-
 export const enrolledDetails = async (req, res) => {
   try {
     const userRole = req.user.role;
-    const { courseId } = req.query;
+    const instructorId = req.user.id;
+
     if (!userRole) {
-      return res.status(400).json({ message: "no user role found" });
+      return res.status(400).json({ message: "No user role found" });
     } else {
-      if (userRole === "instructor") {
-        if (!courseId) {
-          return res.status(400).json({ message: "no course id found" });
-        } else {
-          const enrolled = await Enrolled.find({ course: courseId });
-          return res
-            .status(200)
-            .json({ message: "enrolled students are", data: enrolled });
-        }
+      if (userRole !== "instructor") {
+        return res.status(403).json({ message: "Access denied" });
       } else {
-        return res.status(400).json({ message: "access denied" });
+        // Populate student name and course title
+        const enrolled = await Enrolled.find()
+          .populate({
+            path: "student",
+            select: "name email",
+          })
+          .populate({
+            path: "course",
+            select: "title",
+            match: { instructor: instructorId },
+          });
+
+        return res.status(200).json({
+          message: "Enrolled students with course details",
+          data: enrolled,
+        });
       }
     }
   } catch (err) {
-    res.status(500).json({
-      message: "error is in the enrolled details in the backend ",
-      err: err,
+    console.error("Error in enrolledDetails:", err);
+    return res.status(500).json({
+      message: "Error fetching enrolled details from backend",
+      error: err.message,
     });
-    console.log(err, "error is in the enrolled details in the backend ");
   }
 };
 
@@ -497,5 +525,60 @@ export const avgRating = async (req, res) => {
       .status(500)
       .json({ message: "error is in the backend avgrating", err: err });
     console.log(err, "error is in the backend avgrating");
+  }
+};
+
+// -----------total earnings------------------------
+export const instructorEarnings = async (req, res) => {
+  try {
+    const { id: instructorId, role } = req.user;
+
+    if (role !== "instructor") {
+      return res.status(403).json({ message: "Not authorized" });
+    }
+
+    const courses = await Course.find({
+      instructor: instructorId,
+      is_deleted: false,
+    });
+
+    if (!courses.length) {
+      return res.status(404).json({ message: "No courses found" });
+    }
+
+    let totalEarnings = 0;
+    const courseDetails = [];
+
+    for (let course of courses) {
+      // Fetch all enrollments with saved purchase price
+      const enrollments = await Enrolled.find({ course: course._id });
+
+      // Calculate earnings based on actual purchase price
+      const courseEarnings = enrollments.reduce(
+        (sum, item) => sum + (item.price_at_purchase || 0),
+        0
+      );
+
+      totalEarnings += courseEarnings;
+
+      courseDetails.push({
+        courseId: course._id,
+        title: course.title,
+        price: course.price, // current price shown only for info
+        enrolledStudents: enrollments.length,
+        earnings: courseEarnings,
+      });
+    }
+
+    return res.status(200).json({
+      message: "Instructor earnings fetched successfully",
+      totalEarnings,
+      courses: courseDetails,
+    });
+  } catch (err) {
+    console.error("Error fetching instructor earnings:", err);
+    return res
+      .status(500)
+      .json({ message: "Server error", error: err.message });
   }
 };

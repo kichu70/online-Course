@@ -6,20 +6,35 @@ import { Enrolled } from "../models/enrolled.js";
 import Stripe from "stripe";
 import { Lecture } from "../models/lecture.js";
 import { Review } from "../models/review.js";
-import {Completed} from "../models/completedLecture.js"
+import { Completed } from "../models/completedLecture.js";
 
 // --------list allcourse--------
 
 export const allCourse = async (req, res) => {
   try {
-    const query = req.query;
-    console.log(query);
-    const isDelete = { is_deleted: false };
-    const isApproved = { status: "approved" };
-    const filter = Object.assign({}, isDelete, query, isApproved);
-    console.log(filter);
-    const data = await Course.find(filter);
-    res.status(201).json({ message: "all course's are", data });
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 8;
+
+    const skip = (page - 1) * limit;
+
+
+    const total = await Course.countDocuments({
+      is_deleted: false,
+      status: "approved",
+    });
+
+    const data = await Course.find({
+      is_deleted: false,
+      status: "approved",
+    }).sort({ average_rating: -1 })
+      .skip(skip)
+      .limit(limit);
+    res.status(201).json({
+      totalPage: Math.ceil(total / limit),
+      totalIteam: total,
+      message: "all course's are",
+      data,
+    });
   } catch (err) {
     res.status(500).json({
       message: "error is in the backend list all course in user",
@@ -29,6 +44,34 @@ export const allCourse = async (req, res) => {
   }
 };
 
+// --------list anycourseusing query--------
+
+export const anyCourse = async (req, res) => {
+  try {
+    const total = await Course.countDocuments({
+      is_deleted: false,
+      status: "approved",
+    });
+
+    const query = req.query;
+    console.log(query);
+    const isDelete = { is_deleted: false };
+    const isApproved = { status: "approved" };
+    const filter = Object.assign({}, isDelete, query, isApproved);
+    console.log(filter);
+    const data = await Course.find(filter).sort({ average_rating: -1 });
+    res.status(201).json({
+      message: "all course's are",
+      data,
+    });
+  } catch (err) {
+    res.status(500).json({
+      message: "error is in the backend list all course in user",
+      err: err,
+    });
+    console.log(err, "error is in the backend list all course in user");
+  }
+};
 // ----------singleCourse---------------
 
 export const singleCourse = async (req, res) => {
@@ -36,11 +79,12 @@ export const singleCourse = async (req, res) => {
     const { id } = req.query;
     const data = await Course.findOne({
       _id: id,
-      is_deleted: false,
-      status: "approved",
+      // is_deleted: false,
+      // status: "approved",
     });
     if (!data) {
-      return res.status(404).json({ message: "no course found !!" });
+      console.log({ message: "no course found !!" ,id:id})
+      return res.status(404).json({ message: "no course found !!" ,id:id});
     } else {
       res
         .status(201)
@@ -52,7 +96,7 @@ export const singleCourse = async (req, res) => {
   }
 };
 
-// ---------addEnrolle------------
+// --------- free addEnrolle------------
 
 export const addEnroll = async (req, res) => {
   try {
@@ -71,12 +115,13 @@ export const addEnroll = async (req, res) => {
         course: courseId,
       });
       if (alreadyhave) {
-        return res.status(400).json({ message: "Already enrolled" });
+        return res.status(200).json({ message: "Already enrolled"});
       } else {
         if (course.price <= 0) {
           const enrolled = await Enrolled.create({
             course: courseId,
             student: userId,
+            price_at_purchase: course.price,
           });
           course.total_enrolled = course.total_enrolled + 1;
           await course.save();
@@ -97,6 +142,10 @@ export const addEnroll = async (req, res) => {
 };
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+
+// ------------------paid conform --------------
+
 
 export const paidEnroll = async (req, res) => {
   try {
@@ -137,6 +186,8 @@ export const paidEnroll = async (req, res) => {
     const enrolled = await Enrolled.create({
       course: courseId,
       student: userId,
+      price_at_purchase: course.price,
+
     });
 
     return res
@@ -158,7 +209,9 @@ export const enrolledCourses = async (req, res) => {
     if (!data) {
       return res.status(404).json({ message: "not enrolled" });
     } else {
-      return res.status(200).json({ message: "enrolled course's are", data: data });
+      return res
+        .status(200)
+        .json({ message: "enrolled course's are", data: data });
     }
   } catch (err) {
     console.log(err, "error is in the get enrolled courses in the backend ");
@@ -206,40 +259,28 @@ export const viewLectuerVideos = async (req, res) => {
 
 // -----------single lecture----------------------------------
 
-
-export const singleLecture =async (req,res)=>{
-  try{
-    const {id:userId,role}=req.user;
-    const {courseId}=req.query;
-    if(!courseId){
-      return res.status(404).json({message:"no courseId found !!"})
-    }
-    else{
-      const enroll = await Enrolled.findOne({
-        course: courseId,
-        student: userId,
-      });
-      if(!enroll){
-        return res.status(404).json({message:"not enrolled"})
-      }
-      else{
-        const {lectureId}=req.query;
-        if(!lectureId){
-          return res.status(404).json({message:"no lecture id found !!"})
+export const singleLecture = async (req, res) => {
+  try {
+    const { id: userId, role } = req.user;
+        const { lectureId } = req.query;
+        if (!lectureId) {
+          return res.status(404).json({ message: "no lecture id found !!" });
+        } else {
+          const data = await Lecture.findOne({
+            _id: lectureId,
+            is_deleted: false,
+          });
+          return res
+            .status(200)
+            .json({ message: "the lecture is ", data: data });
         }
-        else{
-          const data =await Lecture.findOne({_id:lectureId,course:courseId,is_deleted:false})
-          return res.status(200).json({message:"the lecture is ",data:data})
-        }
-      }
-    }
+  } catch (err) {
+    res
+      .status(500)
+      .json({ message: "error is in the backend view single lecture" });
+    console.log(err, "error is in the backend view single lecture");
   }
-  catch(err){
-    res.status(500).json({message:"error is in the backend view single lecture"})
-    console.log(err,"error is in the backend view single lecture")
-  }
-}
-
+};
 
 // --------------add review ---------------------------------
 
@@ -284,7 +325,11 @@ export const addReview = async (req, res) => {
             course.average_rating = Number(avg);
             await course.save();
 
-            return res.status(201).json({ message: "review is added",data:createReview ,newAverage: avg,});
+            return res.status(201).json({
+              message: "review is added",
+              data: createReview,
+              newAverage: avg,
+            });
           }
         }
       }
@@ -295,37 +340,44 @@ export const addReview = async (req, res) => {
   }
 };
 
-
-
 // -----------------completed lectures ---------------
 
-export const completedLecture=async(req,res)=>{
-  try{
-    const {id:userId,role}=req.user
-    if(role !== "student"){
-      return res.status(405).json({message:"not authorized"})
-    }
-    else{
-      const {courseId,lectureId}=req.query
-      if(!courseId ||!lectureId){
-        return res.status(404).json({message:"both course id and lecture id's are requierd"})
-      } 
-      else{
-        const completed =await Completed.findOne({course:courseId,lecture:lectureId})
-        if(completed){
-          return res.status(208).json({message:"already exist"})
-        }
-        else{
-          const newCompleted =await Completed.create({
-            course:courseId,lecture:lectureId,user:userId
-          })
-          return res.status(201).json({message:"lescture havebeen completed ",data:newCompleted})
+export const completedLecture = async (req, res) => {
+  try {
+    const { id: userId, role } = req.user;
+    if (role !== "student") {
+      return res.status(405).json({ message: "not authorized" });
+    } else {
+      const { courseId, lectureId } = req.body;
+      if (!courseId || !lectureId) {
+        return res
+          .status(404)
+          .json({ message: "both course id and lecture id's are requierd" });
+      } else {
+        const completed = await Completed.findOne({
+          course: courseId,
+          lecture: lectureId,
+           student: userId,
+        });
+        if (completed) {
+          return res.status(208).json({ message: "already exist" });
+        } else {
+          const newCompleted = await Completed.create({
+            course: courseId,
+            lecture: lectureId,
+            student: userId,
+          });
+          return res.status(201).json({
+            message: "lecture havebeen completed ",
+            data: newCompleted,
+          });
         }
       }
     }
+  } catch (err) {
+    res
+      .status(500)
+      .json({ message: "error is in the backend complete lecture " });
+    console.log(err, "error is in the backend complete lecture ");
   }
-  catch(err){
-    res.status(500).json({message:"error is in the backend complete lecture "})
-    console.log(err,"error is in the backend complete lecture ")
-  }
-}
+};

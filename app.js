@@ -9,6 +9,7 @@ import instructorRoute from './routes/instructorRoutes.js'
 import paymentRouter from './routes/paymentRoutes.js'
 import adminRouter from './routes/adminRoutes.js'
 import authRouter from './routes/authRoutes.js'
+import path from 'path'
 
 connect;
 
@@ -17,6 +18,7 @@ const server = http.createServer(app)
 
 app.use(express.json())
 app.use(cors())
+app.use("/uploads", express.static(path.join(path.resolve(), "uploads")));
 
 app.use("/auth",authRouter)
 app.use("/student",userRouter)

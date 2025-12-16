@@ -27,13 +27,17 @@ const courseSchema = new mongoose.Schema(
 
     price: {
       type: Number,
-      default: 0, // free course
+      default: 0, 
     },
 
     instructor: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "users",
       required: true,
+    },
+    instructor_name: {
+      type: mongoose.Schema.Types.String,
+      ref: "users",
     },
     average_rating: {
       type: Number,
