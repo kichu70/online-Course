@@ -10,9 +10,28 @@ export const allUsers = async (req, res) => {
     if (role !== "admin") {
       return res.status(405).json({ message: "User not authorized" });
     } else {
+      // Pagination
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10; // default 10 users per page
+      const skip = (page - 1) * limit;
+
       const query = req.query;
-      const users = await User.find(query);
-      res.status(200).json({ message: "all users are", data: users });
+
+      // Count total users
+      const total = await User.countDocuments(query);
+
+      // Fetch users with pagination
+      const users = await User.find(query)
+        .select("-password -createdAt -updatedAt -__v")
+        .skip(skip)
+        .limit(limit);
+
+      res.status(200).json({
+        totalPage: Math.ceil(total / limit),
+        totalUser: total,
+        message: "all users are",
+        data: users,
+      });
     }
   } catch (err) {
     res
@@ -87,7 +106,7 @@ export const deleteUser = async (req, res) => {
 
 // ======================course ======================================================
 
-//-------approve course ------------
+// -------approve course ------------
 
 // export const approveCourse =async (req,res)=>{
 //     try{
@@ -123,7 +142,7 @@ export const deleteUser = async (req, res) => {
 //     }
 // }
 
-// //-------reject course ------------
+//-------reject course ------------
 
 // export const rejectCourse =async (req,res)=>{
 //     try{
@@ -167,11 +186,28 @@ export const allCourse = async (req, res) => {
     if (role !== "admin") {
       return res.status(404).json({ message: "not authorized" });
     } else {
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10; // default 10 course per page
+      const skip = (page - 1) * limit;
+
       const query = req.query;
-      const course = await Course.find(query);
-      return res
-        .status(200)
-        .json({ message: "all course's are", data: course });
+
+      const total = await Course.countDocuments(query);
+
+      const course = await Course.find(query)
+        .populate({
+          path: "instructor",
+          select: "name",
+        })
+        .select(" -createdAt -updatedAt -__v")
+        .skip(skip)
+        .limit(limit);
+      return res.status(200).json({
+        message: "all course's are",
+        data: course,
+        totalPage: Math.ceil(total / limit),
+        totalCourse: total,
+      });
     }
   } catch (err) {
     res.status(500).json({ message: "error is in the backend all course's" });
@@ -179,43 +215,35 @@ export const allCourse = async (req, res) => {
   }
 };
 
-
-
-
 // ----------single course ---------------------------
 
-
-
-
-export const singelCourse =async(req,res)=>{
-  try{
-    const{id:adminId,role}=req.user
-    if(role !=="admin"){
-      return res.status(405).json({message:"no't authorized"})
-    }
-    else{
-      const {courseId}=req.query;
-      if(!courseId){
-        return res.status(404).json({message:"no course id found "})
-      }
-      else{
-        const course=await Course.findById(courseId)
-        if(!course){
-          return res.status(404).json({message:"no course found"})
-        }
-        else{
-          return res.status(200).json({message:"course details is ",course})
+export const singelCourse = async (req, res) => {
+  try {
+    const { id: adminId, role } = req.user;
+    if (role !== "admin") {
+      return res.status(405).json({ message: "no't authorized" });
+    } else {
+      const { courseId } = req.query;
+      if (!courseId) {
+        return res.status(404).json({ message: "no course id found " });
+      } else {
+        const course = await Course.findById(courseId);
+        if (!course) {
+          return res.status(404).json({ message: "no course found" });
+        } else {
+          return res
+            .status(200)
+            .json({ message: "course details is ", course });
         }
       }
     }
+  } catch (err) {
+    res
+      .status(500)
+      .json({ message: "error is in the backend viewsingle Coures admin" });
+    console.log(err, "error is in the backend viewsingle Coures admin");
   }
-  catch(err){
-    res.status(500).json({message:"error is in the backend viewsingle Coures admin"})
-    console.log(err,"error is in the backend viewsingle Coures admin")
-  }
-}
-
-
+};
 
 // --------------approve reject toggle --------------
 
@@ -309,6 +337,42 @@ export const deleteCourse = async (req, res) => {
 
 export const allLectures = async (req, res) => {
   try {
+    const { role } = req.user;
+    if (role !== "admin") {
+      return res.status(405).json({ message: "no  authorized" });
+    } else {
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+      const skip = (page - 1) * limit;
+      const query = req.query;
+      const total = await Lecture.countDocuments(query);
+
+      const lecture = await Lecture.find()
+        .populate({
+          path: "instructor",
+          select: "name",
+        })
+        .skip(skip)
+        .limit(limit);
+      if (!lecture) {
+        return res.status(404).json({ message: "no lecture found" });
+      } else {
+        return res.status(200).json({
+          message: "the lecture's of the course are ",
+          totalPage: Math.ceil(total / limit),
+          totalLecture: total,
+          data: lecture,
+        });
+      }
+    }
+  } catch (err) {
+    console.log(err, "error is in the backend view all lectures");
+  }
+};
+// -----------------viewlectures---------------------------
+
+export const allLecturesCourse = async (req, res) => {
+  try {
     const { id: adminId, role } = req.user;
     if (role !== "admin") {
       return res.status(405).json({ message: "no  authorized" });
@@ -317,13 +381,14 @@ export const allLectures = async (req, res) => {
       if (!courseId) {
         return res.status(404).json({ message: "no coures id found" });
       } else {
-        const lecture = await Lecture.find({ course:courseId });
+        const lecture = await Lecture.find({ course: courseId });
         if (!lecture) {
           return res.status(404).json({ message: "no lecture found" });
         } else {
-          return res
-            .status(200)
-            .json({ message: "the lecture's of the course are ", lecture });
+          return res.status(200).json({
+            message: "the lecture's of the course are ",
+            data: lecture,
+          });
         }
       }
     }
@@ -344,8 +409,10 @@ export const singleLecture = async (req, res) => {
       if (!lectureId) {
         return res.status(404).json({ message: "no lecture id found" });
       }
-      const lecture =await Lecture.findById(lectureId)
-      return res.status(200).json({message:"the single lecture is",lecture})
+      const lecture = await Lecture.findById(lectureId);
+      return res
+        .status(200)
+        .json({ message: "the single lecture is", lecture });
     }
   } catch (err) {
     res
@@ -374,7 +441,7 @@ export const toggledeleteLecture = async (req, res) => {
         }
         const deleted = await Lecture.findByIdAndUpdate(
           lectureId,
-          { is_deleted: !lecture.is_deleted},
+          { is_deleted: !lecture.is_deleted },
           { new: true }
         );
         if (!deleted) {

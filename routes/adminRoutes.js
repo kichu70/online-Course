@@ -1,6 +1,6 @@
 import express from "express"
 import { authCheck } from "../middlewares/authCheck.js";
-import { allCourse, allLectures, allUsers, deleteCourse, toggledeleteLecture, deleteUser, singelCourse, singleLecture, singleUser, toggleCourseStatus } from "../controllers/adminController.js";
+import { allCourse, allLectures, allUsers, deleteCourse, toggledeleteLecture, deleteUser, singelCourse, singleLecture, singleUser, toggleCourseStatus, allLecturesCourse } from "../controllers/adminController.js";
 
 
 const router =express.Router();
@@ -28,6 +28,7 @@ router.put("/delete-reactive-course",deleteCourse)
 // ----------------lectures--------------
 
 router.get("/all-lecture",allLectures)
+router.get("/all-lecture-course",allLecturesCourse)
 router.get("/single-lecture",singleLecture)
 router.put("/delete-reactive-lecture",toggledeleteLecture)
 

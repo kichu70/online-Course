@@ -32,8 +32,8 @@ export const register = async (req, res) => {
         if (EmailExist) {
           return res.status(401).json({ message: "email already exist" });
         } else {
-          const dp = req.file
-            ? "/uploads/" + req.file.filename
+          const profilePic = req.file
+            ? `/uploads/${req.file.filename}`
             : "/uploads/profile.jpg";
 
           const newUser = await User.create({
@@ -42,10 +42,15 @@ export const register = async (req, res) => {
             email,
             bio,
             role,
-            profile_pic: dp,
+            profile_pic: profilePic,
           });
           const token = jwt.sign(
-            { id: newUser._id, role: newUser.role, name: newUser.name },
+            {
+              id: newUser._id,
+              role: newUser.role,
+              name: newUser.name,
+              profile_pic: dp,
+            },
             process.env.JWT_SECRET,
             { expiresIn: "1d" }
           );
@@ -118,9 +123,7 @@ export const login = async (req, res) => {
             name: user1.name,
             email: user1.email,
             role: user1.role,
-            profile: user1.profile_pic
-              ? `${process.env.BASE_URL}/uploads/${user1.profile_pic}`
-              : null,
+            profile: user1.profile_pic || null,
           };
 
           return res.json({

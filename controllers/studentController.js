@@ -205,7 +205,14 @@ export const enrolledCourses = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    const data = await Enrolled.find({ student: userId });
+    const data = await Enrolled.find({ student: userId }).populate({
+      path: "course",
+      select: "title description instructor category  thumbnail price",
+              populate: {
+          path: "instructor",
+          select: "name"
+        }
+    })
     if (!data) {
       return res.status(404).json({ message: "not enrolled" });
     } else {

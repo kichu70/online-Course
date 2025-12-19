@@ -15,8 +15,11 @@ export const singleCourse = async (req, res) => {
       const courses = await Course.findOne({
         instructor: instructorId,
         _id: courseId,
+      }).populate({
+        path: "instructor",
+        select: "name",
       });
-      return res.status(200).json({ message: "course is", data:courses });
+      return res.status(200).json({ message: "course is", data: courses });
     }
   } catch (err) {
     res
@@ -37,8 +40,16 @@ export const instructorCourse = async (req, res) => {
       const course = await Course.find({
         instructor: userId,
         is_deleted: false,
+      }).populate({
+        path: "instructor",
+        select: "name",
       });
-      res.status(201).json({ message: "all couses are fetched", data: course });
+
+      res.status(201).json({
+        message: "all couses are fetched",
+
+        data: course,
+      });
     }
   } catch (err) {
     console.log(err, "error is in the bakend view-all-course");
@@ -50,15 +61,37 @@ export const instructorCourse = async (req, res) => {
 
 export const mostRatedCourse = async (req, res) => {
   try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 6;
+
+    const skip = (page - 1) * limit;
+
     const userId = req.user.id;
     if (!userId) {
       return res.status(400).json({ message: "id is requierd" });
     } else {
+      const total = await Course.countDocuments({
+        instructor: userId,
+        is_deleted: false,
+      });
+
       const course = await Course.find({
         instructor: userId,
         is_deleted: false,
-      }).sort({ average_rating: -1 });
-      res.status(201).json({ message: "all couses are fetched", data: course });
+      })
+        .populate({
+          path: "instructor",
+          select: "name",
+        })
+        .skip(skip)
+        .limit(limit)
+        .sort({ average_rating: -1 });
+      res.status(201).json({
+        message: "all couses are fetched",
+        totalPage: Math.ceil(total / limit),
+        totalIteam: total,
+        data: course,
+      });
     }
   } catch (err) {
     console.log(err, "error is in the bakend view-all-course");
@@ -132,12 +165,12 @@ export const updateCourse = async (req, res) => {
       instructor: userId,
       _id: id,
       is_deleted: false,
-      status: "approved",
+      // status: "approved",
     });
 
     if (!data) {
       console.log("Access denied");
-      return res.json({ message: "cant't update the Course" });
+      return res.status(400).json({ message: "cant't update the Course" });
     } else {
       const errors = validationResult(req);
 
@@ -159,12 +192,15 @@ export const updateCourse = async (req, res) => {
           {
             new: true,
           }
-        );
+        ).populate({
+          path: "instructor",
+          select: "name",
+        });
         if (!updateCourse) {
           return res.status(404).json({ message: "course not found" });
         } else {
           res
-            .status(404)
+            .status(201)
             .json({ message: "Couser have been updated", data: updateCourse });
         }
       }
@@ -261,12 +297,11 @@ export const singleLecture = async (req, res) => {
     if (role !== "instructor") {
       return res.status(405).json({ message: "not authorized" });
     } else {
-      const { courseId, lectureId } = req.query;
-      if (!courseId || !lectureId) {
-        return res.status(404).json({ message: "no course id is found" });
+      const { lectureId } = req.query;
+      if (!lectureId) {
+        return res.status(404).json({ message: "no lecture id is found" });
       } else {
-        const lecture = await Lecture.find({
-          course: courseId,
+        const lecture = await Lecture.findOne({
           _id: lectureId,
           is_deleted: false,
           instructor: instructorId,
@@ -274,7 +309,9 @@ export const singleLecture = async (req, res) => {
         if (!lecture) {
           return res.status(404).json({ message: "no lectures found" });
         } else {
-          return res.status(200).json({ message: "lecture data is", lecture });
+          return res
+            .status(200)
+            .json({ message: "lecture data is", data: lecture });
         }
       }
     }
@@ -329,7 +366,12 @@ export const addLecture = async (req, res) => {
               title,
               video_url: videoUrl,
             });
-            course.total_lectures = course.total_lectures + 1;
+            // Recalculate total lectures
+            const totalLectures = await Lecture.countDocuments({
+              course: courseId,
+              is_deleted: false,
+            });
+            course.total_lectures = totalLectures;
             await course.save();
             res.status(201).json({
               message: "Lecture added successfully",
@@ -454,6 +496,14 @@ export const deleteLecture = async (req, res) => {
           if (!updatedLecture) {
             return res.status(404).json({ message: "can't delete lecture" });
           } else {
+            // Recalculate total lectures
+            const totalLectures = await Lecture.countDocuments({
+              course: courseId,
+              is_deleted: false,
+            });
+            course.total_lectures = totalLectures;
+            await course.save();
+            await course.save();
             return res
               .status(200)
               .json({ message: "data deleted", data: updatedLecture });
