@@ -4,6 +4,7 @@ dotenv.config();
 import { validationResult } from "express-validator";
 import jwt from "jsonwebtoken";
 import User from "../models/user.js";
+import { sendOtpMail } from "../utils/email.js";
 
 //  -----------"User Register"-------------------------------------------------------------
 
@@ -49,7 +50,7 @@ export const register = async (req, res) => {
               id: newUser._id,
               role: newUser.role,
               name: newUser.name,
-              profile_pic: dp,
+              profile_pic:profilePic,
             },
             process.env.JWT_SECRET,
             { expiresIn: "1d" }
@@ -225,5 +226,67 @@ export const viewProfile = async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: "error is in the backend view profile " });
     console.log(err, "error is in the backend view profile ");
+  }
+};
+
+
+// -------------------- Forgot Password --------------------
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if(!email){
+      return res.status(400).json({message:"email is requierd"})
+    }
+    else{
+      const user = await User.findOne({ email });
+      if (!user){
+        return res.status(404).json({ message: "user not found" });
+      } 
+      else{
+        const otp = Math.floor(100000 + Math.random() * 900000); // 6-digit OTP
+        user.resetOtp = otp;
+        user.resetOtpExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes
+        await user.save();
+    
+        await sendOtpMail(email, otp); // send OTP via email
+        res.json({ message: "OTP sent to email" });
+      }
+  
+    }
+  } catch (err) {
+    console.log(err, "error in forgotPassword");
+    res.status(500).json({ message: "server error in forgotPassword" });
+  }
+};
+
+// -------------------- Verify OTP --------------------
+export const verifyOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    const user = await User.findOne({ email, resetOtp: otp, resetOtpExpiry: { $gt: Date.now() } });
+    if (!user) return res.status(400).json({ message: "Invalid or expired OTP" });
+    res.json({ message: "OTP verified" });
+  } catch (err) {
+    console.log(err, "error in verifyOtp");
+    res.status(500).json({ message: "server error in verifyOtp" });
+  }
+};
+
+// -------------------- Reset Password --------------------
+export const resetPassword = async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+    const user = await User.findOne({ email, resetOtp: otp, resetOtpExpiry: { $gt: Date.now() } });
+    if (!user) return res.status(400).json({ message: "Invalid or expired OTP" });
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    user.resetOtp = null;
+    user.resetOtpExpiry = null;
+    await user.save();
+
+    res.json({ message: "Password reset successful" });
+  } catch (err) {
+    console.log(err, "error in resetPassword");
+    res.status(500).json({ message: "server error in resetPassword" });
   }
 };

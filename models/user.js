@@ -36,16 +36,19 @@ const UserSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
-    // courses: [
-    //   {
-    //     type: mongoose.Schema.Types.ObjectId,
-    //     ref: "courses",
-    //   },
-    // ],
     is_approved: {
       type: Boolean,
       default: false,
     },
+    resetOtp: {
+      type: String,
+      default: null,
+    },
+    resetOtpExpiry: {
+      type: Date,
+      default: null,
+    },
+
   },
   {
     timestamps: true,

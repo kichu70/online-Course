@@ -221,19 +221,21 @@ export const singelCourse = async (req, res) => {
   try {
     const { id: adminId, role } = req.user;
     if (role !== "admin") {
-      return res.status(405).json({ message: "no't authorized" });
+      return res.status(403).json({ message: "no't authorized" });
     } else {
       const { courseId } = req.query;
       if (!courseId) {
-        return res.status(404).json({ message: "no course id found " });
+        return res.status(400).json({ message: "no course id found " });
       } else {
-        const course = await Course.findById(courseId);
+        const course = await Course.findOne({ _id: courseId })
+          .populate({ path: "instructor", select: "name" })
+          .select(" -createdAt -updatedAt -__v");
         if (!course) {
           return res.status(404).json({ message: "no course found" });
         } else {
           return res
             .status(200)
-            .json({ message: "course details is ", course });
+            .json({ message: "course details is ", data: course });
         }
       }
     }
@@ -382,7 +384,7 @@ export const allLecturesCourse = async (req, res) => {
         return res.status(404).json({ message: "no coures id found" });
       } else {
         const lecture = await Lecture.find({ course: courseId });
-        if (!lecture) {
+        if (lecture.length === 0) {
           return res.status(404).json({ message: "no lecture found" });
         } else {
           return res.status(200).json({
@@ -412,7 +414,7 @@ export const singleLecture = async (req, res) => {
       const lecture = await Lecture.findById(lectureId);
       return res
         .status(200)
-        .json({ message: "the single lecture is", lecture });
+        .json({ message: "the single lecture is", data:lecture });
     }
   } catch (err) {
     res

@@ -388,3 +388,59 @@ export const completedLecture = async (req, res) => {
     console.log(err, "error is in the backend complete lecture ");
   }
 };
+
+// ----------- track course progress for student -----------
+
+export const trackProgress = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { courseId } = req.query;
+
+    if (!courseId) {
+      return res.status(400).json({ message: "Course ID is required" });
+    }
+
+    // All lectures
+    const lectures = await Lecture.find({
+      course: courseId,
+      is_deleted: false,
+    });
+
+    const totalLectures = lectures.length;
+
+    if (totalLectures === 0) {
+      return res.status(200).json({
+        totalLectures: 0,
+        completedLectures: [],
+        progress: 0,
+      });
+    }
+
+    // Completed lectures
+    const completed = await Completed.find({
+      course: courseId,
+      student: userId,
+    }).select("lecture");
+
+    // extract lecture IDs
+    const completedLectureIds = completed.map(item =>
+      item.lecture.toString()
+    );
+
+    const completedCount = completedLectureIds.length;
+
+    const progress = Math.round(
+      (completedCount / totalLectures) * 100
+    );
+
+    res.status(200).json({
+      message: "Course progress fetched successfully",
+      totalLectures,
+      completedLectures: completedLectureIds, 
+      progress, // 
+    });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: "Error fetching course progress" });
+  }
+};

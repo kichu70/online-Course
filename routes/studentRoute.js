@@ -1,13 +1,10 @@
 import express from "express"
 import { check } from "express-validator";
-import { addEnroll, addReview, allCourse, anyCourse, completedLecture, enrolledCourses, paidEnroll, singleCourse, singleLecture, viewLectuerVideos } from "../controllers/studentController.js";
+import { addEnroll, addReview, allCourse, anyCourse, completedLecture, enrolledCourses, paidEnroll, singleCourse, singleLecture, trackProgress, viewLectuerVideos } from "../controllers/studentController.js";
 import { authCheck } from "../middlewares/authCheck.js";
 
 
 const router =express.Router();
-
-
-
 
 
 
@@ -33,5 +30,6 @@ router.get("/single-lecture",singleLecture)
 
 router.post("/completed-lecture",completedLecture)
 
+router.get("/track-progress", trackProgress);
 
 export default router;

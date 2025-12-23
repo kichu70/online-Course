@@ -1,6 +1,6 @@
 import express from "express";
 import { check } from "express-validator";
-import { login, register, updateUser, viewProfile } from "../controllers/authController.js";
+import { forgotPassword, login, register, resetPassword, updateUser, verifyOtp, viewProfile } from "../controllers/authController.js";
 import { authCheck } from "../middlewares/authCheck.js";
 import { upload } from "../utils/multerFileUploads.js";
 
@@ -51,6 +51,10 @@ router.post(
   login
 );
 
+router.post("/forgot-password", forgotPassword);
+router.post("/verify-otp", verifyOtp);
+router.post("/reset-password", resetPassword);
+
 router.use(authCheck);
 
 router.put(
@@ -70,5 +74,8 @@ router.put(
 );
 
 router.get("/profile",viewProfile)
+
+
+
 
 export default router;
