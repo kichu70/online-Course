@@ -66,7 +66,7 @@ router.post(
 );
 
 router.put(
-  "/update-course",
+  "/update-course",upload.single("thumbnail"),
   [
     check("title")
       .optional()

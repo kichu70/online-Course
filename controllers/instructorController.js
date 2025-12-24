@@ -186,9 +186,13 @@ export const updateCourse = async (req, res) => {
         });
       } else {
         const { title, description, category, price } = req.body;
+    let thumbnail = data.thumbnail;
+    if (req.file) {
+      thumbnail = "/uploads/" + req.file.filename;
+    }
         const updateCourse = await Course.findByIdAndUpdate(
           id,
-          { title, description, category, price },
+          { title, description, category, price, thumbnail  },
           {
             new: true,
           }
