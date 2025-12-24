@@ -79,8 +79,8 @@ export const singleCourse = async (req, res) => {
     const { id } = req.query;
     const data = await Course.findOne({
       _id: id,
-      // is_deleted: false,
-      // status: "approved",
+      is_deleted: false,
+      status: "approved",
     });
     if (!data) {
       console.log({ message: "no course found !!" ,id:id})
