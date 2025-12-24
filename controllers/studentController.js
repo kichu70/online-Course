@@ -295,8 +295,7 @@ export const addReview = async (req, res) => {
   try {
     const { courseId } = req.query;
     const userId = req.user.id;
-    const { rating } = req.body;
-    // const cmnt =req.body
+    const {comment , rating } = req.body;
     if (!courseId) {
       return res.status(404).json({ message: "course id is not found" });
     } else {
@@ -322,7 +321,7 @@ export const addReview = async (req, res) => {
               course: courseId,
               student: userId,
               rating: rating,
-              // comment:cmnt
+              comment:comment
             });
 
             const allRating = await Review.find({ course: courseId });
