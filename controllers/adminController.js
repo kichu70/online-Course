@@ -105,79 +105,6 @@ export const deleteUser = async (req, res) => {
 };
 
 // ======================course ======================================================
-
-// -------approve course ------------
-
-// export const approveCourse =async (req,res)=>{
-//     try{
-//         const {id:userId,role}=req.user;
-//         if(role !=="admin"){
-//             return res.status(405).json({message:"user not authorized"})
-//         }
-//         else{
-//             const {courseId} =req.query;
-//             if(!courseId){
-//                 return res.status(404).json({message:"no course id found"})
-//             }
-//             else{
-//                 const course =await Course.findOne({is_deleted:false,_id:courseId})
-//                 if(!course){
-//                     return res.status(404).json({message:"no course found"})
-//                 }
-//                 else{
-//                     if(course.status ==="Approved"){
-//                         return res.status(400).json({message:"course already approved"})
-//                     }
-//                     else{
-//                         const approved =await Course.findByIdAndUpdate(courseId,{status:"Approved"},{new:true})
-//                         return res.status(200).json({message:"course have been varifyed",data:approved})
-//                     }
-//                 }
-//             }
-//         }
-//     }
-//     catch(err){
-//         res.status(500).json({message:"error is in the backend approve course"})
-//         console.log(err,"error is in the backend approve course")
-//     }
-// }
-
-//-------reject course ------------
-
-// export const rejectCourse =async (req,res)=>{
-//     try{
-//         const {id:userId,role}=req.user;
-//         if(role !=="admin"){
-//             return res.status(405).json({message:"user not authorized"})
-//         }
-//         else{
-//             const {courseId} =req.query;
-//             if(!courseId){
-//                 return res.status(404).json({message:"no course id found"})
-//             }
-//             else{
-//                 const course =await Course.findOne({is_deleted:false,_id:courseId})
-//                 if(!course){
-//                     return res.status(404).json({message:"no course found"})
-//                 }
-//                 else{
-//                     if(course.status ==="rejected"){
-//                         return res.status(400).json({message:"course already Rejected"})
-//                     }
-//                     else{
-//                         const approved =await Course.findByIdAndUpdate(courseId,{status:"rejected"},{new:true})
-//                         return res.status(200).json({message:"course have been rejected",data:approved})
-//                     }
-//                 }
-//             }
-//         }
-//     }
-//     catch(err){
-//         res.status(500).json({message:"error is in the backend approve course"})
-//         console.log(err,"error is in the backend approve course")
-//     }
-// }
-
 // -----------list all courses --------------
 
 export const allCourse = async (req, res) => {
@@ -190,21 +117,20 @@ export const allCourse = async (req, res) => {
       const limit = parseInt(req.query.limit) || 10; // default 10 course per page
       const skip = (page - 1) * limit;
 
-      const query = req.query;
+      const filter = {};
 
-      const total = await Course.countDocuments(query);
+      const total = await Course.countDocuments(filter);
 
-      const course = await Course.find(query)
-        .populate({
-          path: "instructor",
-          select: "name",
-        })
-        .select(" -createdAt -updatedAt -__v")
+      const courses = await Course.find(filter)
+        .populate("instructor", "name")
+        .select("-createdAt -updatedAt -__v")
         .skip(skip)
-        .limit(limit);
+        .limit(limit)
+        .sort({ createdAt: -1 });
+
       return res.status(200).json({
         message: "all course's are",
-        data: course,
+        data: courses,
         totalPage: Math.ceil(total / limit),
         totalCourse: total,
       });
@@ -414,7 +340,7 @@ export const singleLecture = async (req, res) => {
       const lecture = await Lecture.findById(lectureId);
       return res
         .status(200)
-        .json({ message: "the single lecture is", data:lecture });
+        .json({ message: "the single lecture is", data: lecture });
     }
   } catch (err) {
     res
