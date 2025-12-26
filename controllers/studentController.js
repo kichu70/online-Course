@@ -27,6 +27,7 @@ export const allCourse = async (req, res) => {
       filter.$or = [
         { title: { $regex: search, $options: "i" } },
         { category: { $regex: search, $options: "i" } },
+        { price: isNaN(search) ? -1 : Number(search)  },
       ];
     }
 
