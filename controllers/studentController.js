@@ -17,7 +17,6 @@ export const allCourse = async (req, res) => {
 
     const skip = (page - 1) * limit;
 
-
     const total = await Course.countDocuments({
       is_deleted: false,
       status: "approved",
@@ -26,7 +25,12 @@ export const allCourse = async (req, res) => {
     const data = await Course.find({
       is_deleted: false,
       status: "approved",
-    }).sort({ average_rating: -1 })
+    })
+      .populate({
+        path: "instructor",
+        select: "name",
+      })
+      .sort({ average_rating: -1 })
       .skip(skip)
       .limit(limit);
     res.status(201).json({
@@ -51,6 +55,9 @@ export const anyCourse = async (req, res) => {
     const total = await Course.countDocuments({
       is_deleted: false,
       status: "approved",
+    }).populate({
+      path: "instructor",
+      select: "name",
     });
 
     const query = req.query;
@@ -81,10 +88,13 @@ export const singleCourse = async (req, res) => {
       _id: id,
       is_deleted: false,
       status: "approved",
+    }).populate({
+      path: "instructor",
+      select: "name",
     });
     if (!data) {
-      console.log({ message: "no course found !!" ,id:id})
-      return res.status(404).json({ message: "no course found !!" ,id:id});
+      console.log({ message: "no course found !!", id: id });
+      return res.status(404).json({ message: "no course found !!", id: id });
     } else {
       res
         .status(201)
@@ -115,7 +125,7 @@ export const addEnroll = async (req, res) => {
         course: courseId,
       });
       if (alreadyhave) {
-        return res.status(200).json({ message: "Already enrolled"});
+        return res.status(200).json({ message: "Already enrolled" });
       } else {
         if (course.price <= 0) {
           const enrolled = await Enrolled.create({
@@ -143,9 +153,7 @@ export const addEnroll = async (req, res) => {
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-
 // ------------------paid conform --------------
-
 
 export const paidEnroll = async (req, res) => {
   try {
@@ -187,7 +195,6 @@ export const paidEnroll = async (req, res) => {
       course: courseId,
       student: userId,
       price_at_purchase: course.price,
-
     });
 
     return res
@@ -208,11 +215,11 @@ export const enrolledCourses = async (req, res) => {
     const data = await Enrolled.find({ student: userId }).populate({
       path: "course",
       select: "title description instructor category  thumbnail price",
-              populate: {
-          path: "instructor",
-          select: "name"
-        }
-    })
+      populate: {
+        path: "instructor",
+        select: "name",
+      },
+    });
     if (!data) {
       return res.status(404).json({ message: "not enrolled" });
     } else {
@@ -269,18 +276,16 @@ export const viewLectuerVideos = async (req, res) => {
 export const singleLecture = async (req, res) => {
   try {
     const { id: userId, role } = req.user;
-        const { lectureId } = req.query;
-        if (!lectureId) {
-          return res.status(404).json({ message: "no lecture id found !!" });
-        } else {
-          const data = await Lecture.findOne({
-            _id: lectureId,
-            is_deleted: false,
-          });
-          return res
-            .status(200)
-            .json({ message: "the lecture is ", data: data });
-        }
+    const { lectureId } = req.query;
+    if (!lectureId) {
+      return res.status(404).json({ message: "no lecture id found !!" });
+    } else {
+      const data = await Lecture.findOne({
+        _id: lectureId,
+        is_deleted: false,
+      });
+      return res.status(200).json({ message: "the lecture is ", data: data });
+    }
   } catch (err) {
     res
       .status(500)
@@ -295,7 +300,7 @@ export const addReview = async (req, res) => {
   try {
     const { courseId } = req.query;
     const userId = req.user.id;
-    const {comment , rating } = req.body;
+    const { comment, rating } = req.body;
     if (!courseId) {
       return res.status(404).json({ message: "course id is not found" });
     } else {
@@ -321,7 +326,7 @@ export const addReview = async (req, res) => {
               course: courseId,
               student: userId,
               rating: rating,
-              comment:comment
+              comment: comment,
             });
 
             const allRating = await Review.find({ course: courseId });
@@ -363,7 +368,7 @@ export const completedLecture = async (req, res) => {
         const completed = await Completed.findOne({
           course: courseId,
           lecture: lectureId,
-           student: userId,
+          student: userId,
         });
         if (completed) {
           return res.status(208).json({ message: "already exist" });
@@ -422,21 +427,19 @@ export const trackProgress = async (req, res) => {
     }).select("lecture");
 
     // extract lecture IDs
-    const completedLectureIds = completed.map(item =>
+    const completedLectureIds = completed.map((item) =>
       item.lecture.toString()
     );
 
     const completedCount = completedLectureIds.length;
 
-    const progress = Math.round(
-      (completedCount / totalLectures) * 100
-    );
+    const progress = Math.round((completedCount / totalLectures) * 100);
 
     res.status(200).json({
       message: "Course progress fetched successfully",
       totalLectures,
-      completedLectures: completedLectureIds, 
-      progress, // 
+      completedLectures: completedLectureIds,
+      progress, //
     });
   } catch (err) {
     console.log(err);
