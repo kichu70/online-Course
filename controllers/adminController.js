@@ -1,6 +1,7 @@
 import { Course } from "../models/course.js";
 import User from "../models/user.js";
 import { Lecture } from "../models/lecture.js";
+import { sendCourseRejectedMail } from "../utils/sendCourseStatusMail.js";
 
 // --------viewAll User -----------------
 
@@ -201,7 +202,17 @@ export const toggleCourseStatus = async (req, res) => {
           } else if (course.status === "pending") {
             newstatus = "approved";
           }
+          if (newstatus === "rejected") {
+            const instructor = await User.findById(course.instructor._id);
 
+            if (instructor?.email) {
+              await sendCourseRejectedMail(
+                instructor.email,
+                instructor.name,
+                course.title
+              );
+            }
+          }
           const update = await Course.findByIdAndUpdate(
             courseId,
             { status: newstatus },
