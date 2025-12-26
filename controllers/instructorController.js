@@ -186,13 +186,13 @@ export const updateCourse = async (req, res) => {
         });
       } else {
         const { title, description, category, price } = req.body;
-    let thumbnail = data.thumbnail;
-    if (req.file) {
-      thumbnail = "/uploads/" + req.file.filename;
-    }
+        let thumbnail = data.thumbnail;
+        if (req.file) {
+          thumbnail = "/uploads/" + req.file.filename;
+        }
         const updateCourse = await Course.findByIdAndUpdate(
           id,
-          { title, description, category, price, thumbnail  },
+          { title, description, category, price, thumbnail },
           {
             new: true,
           }
@@ -532,21 +532,22 @@ export const enrolledDetails = async (req, res) => {
       if (userRole !== "instructor") {
         return res.status(403).json({ message: "Access denied" });
       } else {
-        // Populate student name and course title
-        const enrolled = await Enrolled.find()
-          .populate({
-            path: "student",
-            select: "name email",
-          })
-          .populate({
-            path: "course",
-            select: "title",
-            match: { instructor: instructorId },
-          });
+        const courses = await Course.find(
+          { instructor: instructorId },
+          { _id: 1 }
+        );
+
+        const courseIds = courses.map((course) => course._id);
+
+        const enrolledDetails = await Enrolled.find({
+          course: { $in: courseIds },
+        })
+          .populate("student", "name email")
+          .populate("course", "title category price");
 
         return res.status(200).json({
           message: "Enrolled students with course details",
-          data: enrolled,
+          data: enrolledDetails,
         });
       }
     }
