@@ -14,18 +14,25 @@ export const allCourse = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 8;
-
     const skip = (page - 1) * limit;
 
-    const total = await Course.countDocuments({
-      is_deleted: false,
-      status: "approved",
-    });
+    const search = req.query.search || "";
 
-    const data = await Course.find({
+    const filter = {
       is_deleted: false,
       status: "approved",
-    })
+    };
+    //SEARCH BY TITLE / CATEGORY
+    if (search) {
+      filter.$or = [
+        { title: { $regex: search, $options: "i" } },
+        { category: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const total = await Course.countDocuments(filter);
+
+    const data = await Course.find(filter)
       .populate({
         path: "instructor",
         select: "name",
