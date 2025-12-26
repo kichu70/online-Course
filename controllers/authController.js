@@ -114,7 +114,7 @@ export const login = async (req, res) => {
 
         if (isMatch) {
           const token = jwt.sign(
-            { id: user1._id, role: user1.role, name: user1.name },
+            { id: user1._id, role: user1.role, name: user1.name,profile_pic: user1.profile_pic || null },
             process.env.JWT_SECRET,
             { expiresIn: "1d" }
           );
