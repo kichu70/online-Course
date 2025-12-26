@@ -36,10 +36,10 @@ export const createCheckoutSession = async (req, res) => {
         userId,
         courseId,
       },
-      success_url: `http://localhost:3000/success?session_id={CHECKOUT_SESSION_ID}`,
-      // success_url: `https://online-course-frontend-azure.vercel.app/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `http://localhost:3000/cancel`,
-      // cancel_url: `https://online-course-frontend-azure.vercel.app/cancel`,
+      // success_url: `http://localhost:3000/success?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `https://online-course-frontend-azure.vercel.app/success?session_id={CHECKOUT_SESSION_ID}`,
+      // cancel_url: `http://localhost:3000/cancel`,
+      cancel_url: `https://online-course-frontend-azure.vercel.app/cancel`,
     });
 
     res.json({ url: session.url });
